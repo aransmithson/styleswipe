@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StyleSwipe - KicksWorldwide Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .serif { font-family: 'Playfair Display', serif; }
+        
+        /* Card Stack Styles */
+        .card-container {
+            perspective: 1000px;
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 600px;
+            margin: 0 auto;
+        }
+        
+        .product-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            cursor: grab;
+            touch-action: none;
+            color: #1a1a2e;
+        }
+        
+        .product-card:active { cursor: grabbing; }
+        
+        .product-card.swiping-left { animation: swipeLeft 0.5s forwards; }
+        .product-card.swiping-right { animation: swipeRight 0.5s forwards; }
+        
+        @keyframes swipeLeft {
+            to { transform: translateX(-150%) rotate(-30deg); opacity: 0; }
+        }
+        
+        @keyframes swipeRight {
+            to { transform: translateX(150%) rotate(30deg); opacity: 0; }
+        }
+        
+        .nope-badge, .like-badge {
+            position: absolute;
+            top: 40px;
+            padding: 8px 24px;
+            border: 4px solid;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            transform: rotate(-15deg);
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        
+        .nope-badge { right: 40px; color: #ff4757; border-color: #ff4757; }
+        .like-badge { left: 40px; color: #2ed573; border-color: #2ed573; transform: rotate(15deg); }
+        .show-badge { opacity: 1; }
+        
+        /* Filter Chips */
+        .filter-chip {
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .filter-chip.active {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+        
+        /* Category Tabs */
+        .category-tab {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .category-tab.active {
+            border-bottom-color: #e94560;
+            color: #e94560;
+            background: rgba(233, 69, 96, 0.1);
+        }
+        
+        /* Virtual Model Canvas */
+        #modelCanvas {
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .clothing-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .clothing-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .clothing-item.selected {
+            border: 2px solid #e94560;
+            background: rgba(233, 69, 96, 0.2);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+        }
+        
+        .clothing-item.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #e94560;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        /* Loading animation */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #e94560;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Wishlist sidebar */
+        .wishlist-sidebar {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            background: #1a1a2e;
+        }
+        
+        .wishlist-sidebar.open { transform: translateX(0); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff6b6b; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .step-indicator {
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .step-indicator.active {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            transform: scale(1.2);
+        }
+        
+        .outfit-layer {
+            position: absolute;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .outfit-layer:hover {
+            filter: brightness(1.2);
+            transform: scale(1.02);
+        }
+        
+        .layer-label {
+            position: absolute;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .outfit-layer:hover .layer-label {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="glass-panel sticky top-0 z-50 border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">KW</div>
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text serif">StyleSwipe</h1>
+                        <p class="text-xs text-gray-400">Powered by KicksWorldwide</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="refreshProducts()" class="p-2 text-gray-400 hover:text-white transition" title="Refresh Products">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                    <button onclick="toggleWishlist()" class="relative p-2 text-gray-400 hover:text-white transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                        <span id="wishlistCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Category Selection Bar (Step 1) -->
+    <div id="categoryBar" class="glass-panel border-b border-white/10 hidden">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex justify-center gap-2 flex-wrap">
+                <button onclick="selectCategory('tops')" class="category-tab px-6 py-3 rounded-lg font-semibold text-gray-300 hover:text-white flex items-center gap-2" data-category="tops">
+                    <span>👕</span> Tops
+                    <span id="count-tops" class="bg-white/10 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+                </button>
+                <button onclick="selectCategory('trousers')" class="category-tab px-6 py-3 rounded-lg font-semibold text-gray-300 hover:text-white flex items-center gap-2" data-category="trousers">
+                    <span>👖</span> Trousers
+                    <span id="count-trousers" class="bg-white/10 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+                </button>
+                <button onclick="selectCategory('shoes')" class="category-tab px-6 py-3 rounded-lg font-semibold text-gray-300 hover:text-white flex items-center gap-2" data-category="shoes">
+                    <span>👟</span> Shoes
+                    <span id="count-shoes" class="bg-white/10 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+                </button>
+                <button onclick="selectCategory('hats')" class="category-tab px-6 py-3 rounded-lg font-semibold text-gray-300 hover:text-white flex items-center gap-2" data-category="hats">
+                    <span>🧢</span> Hats
+                    <span id="count-hats" class="bg-white/10 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="max-w-4xl mx-auto mt-8 px-4">
+        <div class="flex justify-center items-center space-x-8 mb-8">
+            <div class="flex flex-col items-center">
+                <div class="step-indicator active w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" data-step="1">1</div>
+                <span class="text-sm mt-2 text-gray-400">Browse</span>
+            </div>
+            <div class="w-16 h-1 bg-white/10 rounded"></div>
+            <div class="flex flex-col items-center">
+                <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" data-step="2">2</div>
+                <span class="text-sm mt-2 text-gray-400">Swipe</span>
+            </div>
+            <div class="w-16 h-1 bg-white/10 rounded"></div>
+            <div class="flex flex-col items-center">
+                <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" data-step="3">3</div>
+                <span class="text-sm mt-2 text-gray-400">Try On</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: Category Selection -->
+    <div id="step1" class="max-w-6xl mx-auto px-4 py-8">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold mb-4 serif">Build Your Outfit</h2>
+            <p class="text-lg text-gray-400">Choose a category to start browsing KicksWorldwide collection</p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <button onclick="startBrowsing('tops')" class="glass-panel p-8 rounded-2xl hover:bg-white/10 transition group text-center">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">👕</div>
+                <h3 class="text-xl font-bold mb-2">Tops</h3>
+                <p class="text-sm text-gray-400">T-shirts, hoodies, jackets</p>
+            </button>
+            
+            <button onclick="startBrowsing('trousers')" class="glass-panel p-8 rounded-2xl hover:bg-white/10 transition group text-center">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">👖</div>
+                <h3 class="text-xl font-bold mb-2">Trousers</h3>
+                <p class="text-sm text-gray-400">Jeans, joggers, shorts</p>
+            </button>
+            
+            <button onclick="startBrowsing('shoes')" class="glass-panel p-8 rounded-2xl hover:bg-white/10 transition group text-center">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">👟</div>
+                <h3 class="text-xl font-bold mb-2">Shoes</h3>
+                <p class="text-sm text-gray-400">Sneakers, boots, sandals</p>
+            </button>
+            
+            <button onclick="startBrowsing('hats')" class="glass-panel p-8 rounded-2xl hover:bg-white/10 transition group text-center">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">🧢</div>
+                <h3 class="text-xl font-bold mb-2">Hats</h3>
+                <p class="text-sm text-gray-400">Caps, beanies, bucket hats</p>
+            </button>
+        </div>
+
+        <div class="text-center mt-12">
+            <button onclick="goToFittingRoom()" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-12 py-4 rounded-full text-lg font-semibold shadow-lg hover:shadow-red-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed" id="goToFittingBtn" disabled>
+                Go to Fitting Room (0 items)
+            </button>
+            <p class="mt-4 text-sm text-gray-500">Add at least one item from any category</p>
+        </div>
+    </div>
+
+    <!-- Step 2: Swipe Interface -->
+    <div id="step2" class="hidden max-w-6xl mx-auto px-4 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Card Stack -->
+            <div class="flex-1 flex flex-col items-center">
+                <div class="mb-6 text-center">
+                    <h3 class="text-2xl font-bold mb-2 capitalize" id="currentCategoryTitle">Tops</h3>
+                    <p class="text-gray-400">Swipe right to add to your outfit</p>
+                </div>
+
+                <div class="card-container" id="cardContainer">
+                    <!-- Cards injected by JS -->
+                </div>
+                
+                <!-- Controls -->
+                <div class="flex items-center gap-6 mt-8">
+                    <button onclick="swipe('left')" class="w-16 h-16 rounded-full glass-panel flex items-center justify-center text-red-400 hover:bg-red-500/20 transition transform hover:scale-110 border border-red-500/30">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="text-center px-4">
+                        <p class="text-sm text-gray-400 mb-1">Swipe or click</p>
+                        <p class="text-xs text-gray-500">Left to skip • Right to add</p>
+                    </div>
+                    
+                    <button onclick="swipe('right')" class="w-16 h-16 rounded-full glass-panel flex items-center justify-center text-green-400 hover:bg-green-500/20 transition transform hover:scale-110 border border-green-500/30">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mt-8 flex gap-4">
+                    <button onclick="backToCategories()" class="px-6 py-2 border border-white/20 rounded-full hover:bg-white/10 transition text-white">
+                        ← Back to Categories
+                    </button>
+                    <button onclick="nextCategory()" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-8 py-2 rounded-full font-semibold shadow-lg hover:shadow-red-500/25 transition">
+                        Next Category →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current Selection Preview -->
+            <div class="lg:w-80">
+                <div class="glass-panel rounded-2xl p-6 sticky top-24">
+                    <h3 class="text-lg font-semibold mb-4 text-white">Your Outfit So Far</h3>
+                    <div id="outfitPreview" class="space-y-3">
+                        <div class="text-gray-500 text-center py-8 text-sm">No items selected yet</div>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-gray-400">Total Items</span>
+                            <span id="totalItems" class="text-2xl font-bold text-white">0</span>
+                        </div>
+                        <button onclick="goToFittingRoom()" class="w-full bg-gradient-to-r from-red-500 to-pink-600 text-white py-3 rounded-full font-semibold hover:shadow-lg transition">
+                            Try It On →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Virtual Fitting Room -->
+    <div id="step3" class="hidden max-w-7xl mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold serif mb-2 gradient-text">Virtual Fitting Room</h2>
+            <p class="text-gray-400">See your complete KicksWorldwide outfit</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Model Canvas -->
+            <div class="lg:col-span-7">
+                <div class="glass-panel rounded-2xl p-6 relative">
+                    <div class="relative w-full max-w-lg mx-auto">
+                        <canvas id="modelCanvas" width="500" height="700" class="w-full h-auto rounded-lg"></canvas>
+                        
+                        <!-- Layer Controls Overlay -->
+                        <div class="absolute top-4 right-4 space-y-2">
+                            <button onclick="toggleLayer('hats')" class="block w-10 h-10 rounded-full bg-black/50 text-white hover:bg-red-500 transition text-lg" title="Toggle Hat">🧢</button>
+                            <button onclick="toggleLayer('tops')" class="block w-10 h-10 rounded-full bg-black/50 text-white hover:bg-red-500 transition text-lg" title="Toggle Top">👕</button>
+                            <button onclick="toggleLayer('trousers')" class="block w-10 h-10 rounded-full bg-black/50 text-white hover:bg-red-500 transition text-lg" title="Toggle Trousers">👖</button>
+                            <button onclick="toggleLayer('shoes')" class="block w-10 h-10 rounded-full bg-black/50 text-white hover:bg-red-500 transition text-lg" title="Toggle Shoes">👟</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-center gap-4 flex-wrap">
+                        <button onclick="resetOutfit()" class="px-6 py-2 border border-white/20 rounded-full hover:bg-white/10 transition text-white text-sm">
+                            Reset All
+                        </button>
+                        <button onclick="randomizeOutfit()" class="px-6 py-2 border border-white/20 rounded-full hover:bg-white/10 transition text-white text-sm">
+                            🎲 Randomize
+                        </button>
+                        <button onclick="saveLook()" class="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-full hover:shadow-lg transition text-sm">
+                            Save Look
+                        </button>
+                        <button onclick="addToCart()" class="px-6 py-2 bg-white text-black rounded-full hover:bg-gray-200 transition font-semibold text-sm">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Items & Controls -->
+            <div class="lg:col-span-5 space-y-6">
+                <!-- Current Outfit -->
+                <div class="glass-panel rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-white flex justify-between items-center">
+                        Current Outfit
+                        <span id="outfitTotal" class="text-2xl font-bold gradient-text">£0.00</span>
+                    </h3>
+                    
+                    <div class="space-y-4" id="fittingRoomItems">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Alternative Options -->
+                <div class="glass-panel rounded-2xl p-6">
+                    <h4 class="font-semibold mb-4 text-white">Switch Items</h4>
+                    <div class="space-y-3 max-h-64 overflow-y-auto" id="alternativeItems">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Style Tips -->
+                <div class="glass-panel rounded-2xl p-6 border border-red-500/20">
+                    <h4 class="font-semibold mb-2 text-red-400">Style Tip</h4>
+                    <p id="styleTip" class="text-sm text-gray-300">Complete your look with items from all categories for a cohesive outfit.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <button onclick="backToBrowsing()" class="text-gray-400 hover:text-white transition underline">
+                ← Back to browsing
+            </button>
+        </div>
+    </div>
+
+    <!-- Wishlist Sidebar -->
+    <div id="wishlistSidebar" class="wishlist-sidebar fixed inset-y-0 right-0 w-full max-w-md shadow-2xl z-50 overflow-y-auto border-l border-white/10">
+        <div class="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
+            <h2 class="text-2xl font-bold serif text-white">Your Collection</h2>
+            <button onclick="toggleWishlist()" class="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Grouped by Category -->
+        <div class="p-6 space-y-6" id="wishlistItems">
+            <!-- Populated by JS -->
+        </div>
+        
+        <div class="p-6 border-t border-white/10 bg-black/20">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-gray-400">Total Value</span>
+                <span id="wishlistTotal" class="text-2xl font-bold text-white">£0.00</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="clearWishlist()" class="py-3 border border-white/20 rounded-full hover:bg-white/10 transition text-white text-sm">
+                    Clear All
+                </button>
+                <button onclick="addWishlistToCart()" class="py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-full hover:shadow-lg transition font-semibold text-sm">
+                    Add All to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="overlay" onclick="toggleWishlist()" class="fixed inset-0 bg-black/80 z-40 hidden transition-opacity backdrop-blur-sm"></div>
+
+    <script>
+        // Demo Products organized by category
+        const demoProducts = {
+            tops: [
+                {
+                    id: "top_1",
+                    title: "Nike Club T-Shirt",
+                    price: { amount: "25.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop",
+                    tags: ["Nike", "White", "Cotton", "Casual"],
+                    vendor: "Nike",
+                    category: "tops",
+                    description: "Essential cotton tee with classic fit"
+                },
+                {
+                    id: "top_2",
+                    title: "Adidas Trefoil Hoodie",
+                    price: { amount: "60.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=800&fit=crop",
+                    tags: ["Adidas", "Black", "Hoodie", "Streetwear"],
+                    vendor: "Adidas",
+                    category: "tops",
+                    description: "Iconic hoodie with front pocket"
+                },
+                {
+                    id: "top_3",
+                    title: "Champion Reverse Weave",
+                    price: { amount: "55.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?w=600&h=800&fit=crop",
+                    tags: ["Champion", "Grey", "Sweatshirt"],
+                    vendor: "Champion",
+                    category: "tops",
+                    description: "Heavyweight fleece crewneck"
+                },
+                {
+                    id: "top_4",
+                    title: "Stussy Basic Tee",
+                    price: { amount: "35.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&h=800&fit=crop",
+                    tags: ["Stussy", "Black", "Streetwear"],
+                    vendor: "Stussy",
+                    category: "tops",
+                    description: "Streetwear essential with logo"
+                }
+            ],
+            trousers: [
+                {
+                    id: "trouser_1",
+                    title: "Carhartt WIP Cargo Pants",
+                    price: { amount: "85.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&h=800&fit=crop",
+                    tags: ["Carhartt", "Beige", "Workwear", "Cargo"],
+                    vendor: "Carhartt",
+                    category: "trousers",
+                    description: "Durable cotton cargo trousers"
+                },
+                {
+                    id: "trouser_2",
+                    title: "Nike Tech Fleece Joggers",
+                    price: { amount: "70.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1517438476312-10d79c077509?w=600&h=800&fit=crop",
+                    tags: ["Nike", "Black", "Joggers", "Sportswear"],
+                    vendor: "Nike",
+                    category: "trousers",
+                    description: "Tapered fit with zip pockets"
+                },
+                {
+                    id: "trouser_3",
+                    title: "Levi's 501 Original",
+                    price: { amount: "80.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&h=800&fit=crop",
+                    tags: ["Levi's", "Blue", "Denim", "Classic"],
+                    vendor: "Levi's",
+                    category: "trousers",
+                    description: "Straight leg iconic jeans"
+                },
+                {
+                    id: "trouser_4",
+                    title: "Adidas Track Pants",
+                    price: { amount: "45.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1517438476312-10d79c077509?w=600&h=800&fit=crop",
+                    tags: ["Adidas", "Navy", "Tracksuit"],
+                    vendor: "Adidas",
+                    category: "trousers",
+                    description: "Classic 3-stripe track pants"
+                }
+            ],
+            shoes: [
+                {
+                    id: "shoe_1",
+                    title: "Nike Air Force 1 '07",
+                    price: { amount: "90.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=800&fit=crop",
+                    tags: ["Nike", "White", "Classic", "Leather"],
+                    vendor: "Nike",
+                    category: "shoes",
+                    description: "The icon refreshed"
+                },
+                {
+                    id: "shoe_2",
+                    title: "Jordan 1 Mid Chicago",
+                    price: { amount: "115.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=600&h=800&fit=crop",
+                    tags: ["Jordan", "Red", "White", "Basketball"],
+                    vendor: "Jordan",
+                    category: "shoes",
+                    description: "Heritage style meets comfort"
+                },
+                {
+                    id: "shoe_3",
+                    title: "Adidas Samba OG",
+                    price: { amount: "80.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=800&fit=crop",
+                    tags: ["Adidas", "Black", "White", "Samba"],
+                    vendor: "Adidas",
+                    category: "shoes",
+                    description: "Terrace culture classic"
+                },
+                {
+                    id: "shoe_4",
+                    title: "New Balance 550",
+                    price: { amount: "110.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=800&fit=crop",
+                    tags: ["New Balance", "White", "Grey", "Vintage"],
+                    vendor: "New Balance",
+                    category: "shoes",
+                    description: "80s basketball revival"
+                }
+            ],
+            hats: [
+                {
+                    id: "hat_1",
+                    title: "New Era 9FORTY Yankees",
+                    price: { amount: "28.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&h=800&fit=crop",
+                    tags: ["New Era", "Navy", "Cap", "MLB"],
+                    vendor: "New Era",
+                    category: "hats",
+                    description: "Adjustable curved brim"
+                },
+                {
+                    id: "hat_2",
+                    title: "Carhartt WIP Beanie",
+                    price: { amount: "22.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=600&h=800&fit=crop",
+                    tags: ["Carhartt", "Black", "Beanie", "Winter"],
+                    vendor: "Carhartt",
+                    category: "hats",
+                    description: "Acrylic knit watch hat"
+                },
+                {
+                    id: "hat_3",
+                    title: "Stussy Stock Bucket",
+                    price: { amount: "35.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1534215754734-18e55d13e346?w=600&h=800&fit=crop",
+                    tags: ["Stussy", "Olive", "Bucket", "Streetwear"],
+                    vendor: "Stussy",
+                    category: "hats",
+                    description: "Cotton twill bucket hat"
+                },
+                {
+                    id: "hat_4",
+                    title: "Nike Club Cap",
+                    price: { amount: "22.00", currencyCode: "GBP" },
+                    image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&h=800&fit=crop",
+                    tags: ["Nike", "Black", "Cap", "Swoosh"],
+                    vendor: "Nike",
+                    category: "hats",
+                    description: "Classic six-panel design"
+                }
+            ]
+        };
+
+        // State Management
+        let state = {
+            currentCategory: null,
+            currentIndex: 0,
+            outfit: {
+                tops: null,
+                trousers: null,
+                shoes: null,
+                hats: null
+            },
+            wishlist: [],
+            hiddenLayers: new Set()
+        };
+
+        const categories = ['tops', 'trousers', 'shoes', 'hats'];
+        const categoryNames = {
+            tops: 'Tops',
+            trousers: 'Trousers',
+            shoes: 'Shoes',
+            hats: 'Hats'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCategoryCounts();
+            updateOutfitPreview();
+        });
+
+        function updateCategoryCounts() {
+            categories.forEach(cat => {
+                const count = demoProducts[cat].length;
+                const el = document.getElementById(`count-${cat}`);
+                if (el) el.textContent = count;
+            });
+        }
+
+        function startBrowsing(category) {
+            state.currentCategory = category;
+            state.currentIndex = 0;
+            
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            document.getElementById('categoryBar').classList.remove('hidden');
+            
+            updateStepIndicator(2);
+            updateCategoryTabs();
+            renderCards();
+            updateOutfitPreview();
+        }
+
+        function selectCategory(category) {
+            if (state.currentCategory === category) return;
+            startBrowsing(category);
+        }
+
+        function updateCategoryTabs() {
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                if (tab.dataset.category === state.currentCategory) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            document.getElementById('currentCategoryTitle').textContent = categoryNames[state.currentCategory];
+        }
+
+        function updateStepIndicator(step) {
+            document.querySelectorAll('.step-indicator').forEach((el, idx) => {
+                if (idx < step) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+            
+            const products = demoProducts[state.currentCategory];
+            const remaining = products.slice(state.currentIndex, state.currentIndex + 3);
+            
+            remaining.forEach((product, index) => {
+                const card = createCard(product, index);
+                container.appendChild(card);
+            });
+            
+            if (remaining.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel rounded-2xl p-8 text-center">
+                        <p class="text-gray-400 mb-4">No more ${categoryNames[state.currentCategory]} to show!</p>
+                        <button onclick="nextCategory()" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-2 rounded-full">
+                            Next Category →
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function createCard(product, index) {
+            const div = document.createElement('div');
+            div.className = 'product-card';
+            div.style.zIndex = 3 - index;
+            div.style.transform = `scale(${1 - index * 0.05}) translateY(${index * 10}px)`;
+            
+            div.innerHTML = `
+                <div class="relative h-3/4 overflow-hidden bg-gray-100">
+                    <img src="${product.image}" class="w-full h-full object-cover" alt="${product.title}" 
+                         onerror="this.src='https://via.placeholder.com/600x800?text=KicksWorldwide'">
+                    <div class="nope-badge">PASS</div>
+                    <div class="like-badge">ADD</div>
+                    <div class="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold">
+                        ${product.vendor}
+                    </div>
+                </div>
+                <div class="p-6 h-1/4 flex flex-col justify-between bg-white">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 line-clamp-1">${product.title}</h3>
+                        <p class="text-gray-600 text-sm line-clamp-2 mt-1">${product.description}</p>
+                    </div>
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-2xl font-bold text-red-600">£${product.price.amount}</span>
+                        <span class="text-xs text-gray-500 uppercase">${product.category}</span>
+                    </div>
+                </div>
+            `;
+            
+            addSwipeHandlers(div);
+            return div;
+        }
+
+        function addSwipeHandlers(card) {
+            let startX = 0;
+            let currentX = 0;
+            let isDragging = false;
+            
+            card.addEventListener('mousedown', startDrag);
+            card.addEventListener('touchstart', startDrag, {passive: true});
+            
+            function startDrag(e) {
+                isDragging = true;
+                startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                card.style.transition = 'none';
+            }
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag, {passive: true});
+            
+            function drag(e) {
+                if (!isDragging) return;
+                currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                const diff = currentX - startX;
+                const rotation = diff * 0.05;
+                
+                card.style.transform = `translateX(${diff}px) rotate(${rotation}deg)`;
+                
+                const nopeBadge = card.querySelector('.nope-badge');
+                const likeBadge = card.querySelector('.like-badge');
+                
+                if (diff < -50) {
+                    nopeBadge.classList.add('show-badge');
+                    likeBadge.classList.remove('show-badge');
+                } else if (diff > 50) {
+                    likeBadge.classList.add('show-badge');
+                    nopeBadge.classList.remove('show-badge');
+                } else {
+                    nopeBadge.classList.remove('show-badge');
+                    likeBadge.classList.remove('show-badge');
+                }
+            }
+            
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
+            
+            function endDrag(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                card.style.transition = 'transform 0.3s ease';
+                
+                const diff = currentX - startX;
+                
+                if (diff < -100) {
+                    swipe('left');
+                } else if (diff > 100) {
+                    swipe('right');
+                } else {
+                    card.style.transform = card.style.transform.includes('scale') ? 
+                        card.style.transform.replace(/translateX\([^)]+\)/, 'translateX(0)') : 
+                        'translateX(0) rotate(0deg)';
+                    card.querySelector('.nope-badge').classList.remove('show-badge');
+                    card.querySelector('.like-badge').classList.remove('show-badge');
+                }
+            }
+        }
+
+        function swipe(direction) {
+            const products = demoProducts[state.currentCategory];
+            
+            if (state.currentIndex >= products.length) {
+                nextCategory();
+                return;
+            }
+            
+            const currentProduct = products[state.currentIndex];
+            
+            if (direction === 'right') {
+                addToOutfit(currentProduct);
+                
+                // Visual feedback
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 animate-bounce font-semibold';
+                toast.innerHTML = `✓ Added ${currentProduct.title}`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }
+            
+            state.currentIndex++;
+            renderCards();
+            updateOutfitPreview();
+        }
+
+        function addToOutfit(product) {
+            state.outfit[product.category] = product;
+            
+            // Also add to wishlist for history
+            if (!state.wishlist.find(item => item.id === product.id)) {
+                state.wishlist.push(product);
+            }
+            
+            updateOutfitPreview();
+            updateWishlistUI();
+        }
+
+        function updateOutfitPreview() {
+            const container = document.getElementById('outfitPreview');
+            const hasItems = Object.values(state.outfit).some(item => item !== null);
+            
+            if (!hasItems) {
+                container.innerHTML = '<div class="text-gray-500 text-center py-8 text-sm">No items selected yet</div>';
+            } else {
+                container.innerHTML = categories.map(cat => {
+                    const item = state.outfit[cat];
+                    if (!item) return '';
+                    return `
+                        <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                            <img src="${item.image}" class="w-12 h-12 object-cover rounded bg-gray-800" onerror="this.src='https://via.placeholder.com/50'">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-sm text-white truncate">${item.title}</p>
+                                <p class="text-xs text-gray-400">£${item.price.amount}</p>
+                            </div>
+                            <button onclick="removeFromOutfit('${cat}')" class="text-red-400 hover:text-red-300">×</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            const totalItems = Object.values(state.outfit).filter(Boolean).length;
+            document.getElementById('totalItems').textContent = totalItems;
+            
+            const btn = document.getElementById('goToFittingBtn');
+            btn.disabled = totalItems === 0;
+            btn.textContent = `Go to Fitting Room (${totalItems} items)`;
+        }
+
+        function removeFromOutfit(category) {
+            state.outfit[category] = null;
+            updateOutfitPreview();
+            updateFittingRoomUI();
+        }
+
+        function nextCategory() {
+            const currentIdx = categories.indexOf(state.currentCategory);
+            const nextIdx = (currentIdx + 1) % categories.length;
+            startBrowsing(categories[nextIdx]);
+        }
+
+        function backToCategories() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('categoryBar').classList.add('hidden');
+            updateStepIndicator(1);
+        }
+
+        function goToFittingRoom() {
+            const hasItems = Object.values(state.outfit).some(item => item !== null);
+            if (!hasItems) {
+                alert('Please add at least one item to your outfit!');
+                return;
+            }
+            
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+            document.getElementById('categoryBar').classList.add('hidden');
+            updateStepIndicator(3);
+            
+            updateFittingRoomUI();
+            drawModel();
+        }
+
+        function backToBrowsing() {
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+            updateStepIndicator(1);
+        }
+
+        function updateFittingRoomUI() {
+            // Current outfit items
+            const container = document.getElementById('fittingRoomItems');
+            container.innerHTML = categories.map(cat => {
+                const item = state.outfit[cat];
+                if (!item) return '';
+                return `
+                    <div class="clothing-item relative flex items-center gap-4 p-4 rounded-xl ${state.hiddenLayers.has(cat) ? 'opacity-50' : ''}">
+                        <img src="${item.image}" class="w-16 h-16 object-cover rounded-lg bg-gray-800" onerror="this.src='https://via.placeholder.com/60'">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-white">${categoryNames[cat]}</h4>
+                            <p class="text-sm text-gray-300">${item.title}</p>
+                            <p class="text-red-400 font-bold">£${item.price.amount}</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="toggleLayer('${cat}')" class="text-xs px-3 py-1 rounded-full ${state.hiddenLayers.has(cat) ? 'bg-gray-600' : 'bg-green-600'} text-white">
+                                ${state.hiddenLayers.has(cat) ? 'Show' : 'Hide'}
+                            </button>
+                            <button onclick="removeFromOutfit('${cat}')" class="text-xs px-3 py-1 rounded-full bg-red-600 text-white">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Alternative items for current categories
+            const altContainer = document.getElementById('alternativeItems');
+            let altHTML = '';
+            
+            categories.forEach(cat => {
+                const currentItem = state.outfit[cat];
+                const alternatives = demoProducts[cat].filter(p => !currentItem || p.id !== currentItem.id).slice(0, 2);
+                
+                if (alternatives.length > 0) {
+                    altHTML += `<h5 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">${categoryNames[cat]}</h5>`;
+                    altHTML += alternatives.map(item => `
+                        <div class="clothing-item flex items-center gap-3 p-3 rounded-lg cursor-pointer" onclick="switchItem('${cat}', '${item.id}')">
+                            <img src="${item.image}" class="w-10 h-10 object-cover rounded bg-gray-800">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-white truncate">${item.title}</p>
+                                <p class="text-xs text-gray-400">£${item.price.amount}</p>
+                            </div>
+                            <span class="text-green-400 text-xs">Switch →</span>
+                        </div>
+                    `).join('');
+                }
+            });
+            
+            altContainer.innerHTML = altHTML || '<p class="text-gray-500 text-sm">No alternatives available</p>';
+            
+            // Update total
+            const total = Object.values(state.outfit)
+                .filter(Boolean)
+                .reduce((sum, item) => sum + parseFloat(item.price.amount), 0);
+            document.getElementById('outfitTotal').textContent = `£${total.toFixed(2)}`;
+            
+            // Update style tip
+            const itemCount = Object.values(state.outfit).filter(Boolean).length;
+            const tips = [
+                "Start building your outfit by adding items from each category.",
+                "Good start! Add more pieces to complete your look.",
+                "Nice combination! Consider the color coordination.",
+                "Great outfit! You have a complete look ready.",
+                "Perfect! This is a full head-to-toe outfit."
+            ];
+            document.getElementById('styleTip').textContent = tips[Math.min(itemCount, 4)];
+        }
+
+        function switchItem(category, itemId) {
+            const item = demoProducts[category].find(p => p.id === itemId);
+            if (item) {
+                state.outfit[category] = item;
+                updateFittingRoomUI();
+                drawModel();
+            }
+        }
+
+        function toggleLayer(category) {
+            if (state.hiddenLayers.has(category)) {
+                state.hiddenLayers.delete(category);
+            } else {
+                state.hiddenLayers.add(category);
+            }
+            updateFittingRoomUI();
+            drawModel();
+        }
+
+        function drawModel() {
+            const canvas = document.getElementById('modelCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            const gradient = ctx.createLinearGradient(0, 0, 500, 700);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid background
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 25) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 25) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+            
+            // Draw simplified figure outline
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(250, 80, 40, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Body line
+            ctx.beginPath();
+            ctx.moveTo(250, 120);
+            ctx.lineTo(250, 400);
+            ctx.stroke();
+            
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(250, 400);
+            ctx.lineTo(200, 650);
+            ctx.moveTo(250, 400);
+            ctx.lineTo(300, 650);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+            
+            // Draw outfit items by layer order (back to front)
+            const layerOrder = ['trousers', 'shoes', 'tops', 'hats'];
+            
+            layerOrder.forEach((category, index) => {
+                if (state.hiddenLayers.has(category)) return;
+                
+                const item = state.outfit[category];
+                if (!item) return;
+                
+                drawOutfitLayer(ctx, item, category, index);
+            });
+            
+            // Draw layer indicators
+            let yOffset = 20;
+            categories.forEach(cat => {
+                if (state.outfit[cat] && !state.hiddenLayers.has(cat)) {
+                    ctx.fillStyle = '#e94560';
+                    ctx.beginPath();
+                    ctx.arc(30, yOffset, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Inter';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(categoryNames[cat], 45, yOffset + 4);
+                    
+                    yOffset += 25;
+                }
+            });
+        }
+
+        function drawOutfitLayer(ctx, item, category, layerIndex) {
+            const centerX = 250;
+            let y, width, height, color;
+            
+            // Define positions and styles for each category
+            switch(category) {
+                case 'hats':
+                    y = 40;
+                    width = 100;
+                    height = 60;
+                    color = getColorFromTags(item.tags);
+                    break;
+                case 'tops':
+                    y = 130;
+                    width = 140;
+                    height = 200;
+                    color = getColorFromTags(item.tags);
+                    break;
+                case 'trousers':
+                    y = 330;
+                    width = 130;
+                    height = 220;
+                    color = getColorFromTags(item.tags);
+                    break;
+                case 'shoes':
+                    y = 600;
+                    width = 120;
+                    height = 60;
+                    color = getColorFromTags(item.tags);
+                    break;
+            }
+            
+            // Draw shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(centerX - width/2 + 5, y + 5, width, height);
+            
+            // Draw item box with brand color
+            ctx.fillStyle = color;
+            ctx.fillRect(centerX - width/2, y, width, height);
+            
+            // Draw border
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(centerX - width/2, y, width, height);
+            
+            // Draw texture/pattern based on category
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            if (category === 'tops') {
+                // Neckline
+                ctx.beginPath();
+                ctx.arc(centerX, y, 30, 0, Math.PI, true);
+                ctx.fill();
+            } else if (category === 'trousers') {
+                // Pockets
+                ctx.fillRect(centerX - width/2 + 10, y + 20, 20, 30);
+                ctx.fillRect(centerX + width/2 - 30, y + 20, 20, 30);
+            } else if (category === 'shoes') {
+                // Split for left/right shoe
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(centerX - 5, y, 10, height);
+            }
+            
+            // Draw text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(item.vendor, centerX, y + height/2 - 5);
+            ctx.font = '12px Inter';
+            ctx.fillText(`£${item.price.amount}`, centerX, y + height/2 + 15);
+            ctx.shadowBlur = 0;
+            
+            // Draw category label
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.font = '10px Inter';
+            ctx.fillText(categoryNames[category].toUpperCase(), centerX, y - 10);
+        }
+
+        function getColorFromTags(tags) {
+            const colorMap = {
+                'white': '#e5e5e5',
+                'black': '#2d2d2d',
+                'navy': '#1e3a8a',
+                'blue': '#3b82f6',
+                'red': '#dc2626',
+                'grey': '#6b7280',
+                'gray': '#6b7280',
+                'green': '#059669',
+                'beige': '#d4a574',
+                'olive': '#556b2f'
+            };
+            
+            for (let tag of tags) {
+                const lowerTag = tag.toLowerCase();
+                if (colorMap[lowerTag]) return colorMap[lowerTag];
+            }
+            
+            // Default colors based on category
+            return '#4b5563';
+        }
+
+        function randomizeOutfit() {
+            categories.forEach(cat => {
+                const products = demoProducts[cat];
+                state.outfit[cat] = products[Math.floor(Math.random() * products.length)];
+            });
+            updateFittingRoomUI();
+            drawModel();
+        }
+
+        function resetOutfit() {
+            state.outfit = { tops: null, trousers: null, shoes: null, hats: null };
+            state.hiddenLayers.clear();
+            updateFittingRoomUI();
+            drawModel();
+        }
+
+        function saveLook() {
+            const items = Object.values(state.outfit).filter(Boolean);
+            if (items.length === 0) return;
+            
+            const total = items.reduce((sum, item) => sum + parseFloat(item.price.amount), 0);
+            const lookData = {
+                outfit: {...state.outfit},
+                timestamp: new Date().toISOString(),
+                total: total
+            };
+            
+            const saved = JSON.parse(localStorage.getItem('kw_outfits') || '[]');
+            saved.push(lookData);
+            localStorage.setItem('kw_outfits', JSON.stringify(saved));
+            
+            alert(`Outfit saved! Total: £${total.toFixed(2)}`);
+        }
+
+        function addToCart() {
+            const items = Object.values(state.outfit).filter(Boolean);
+            if (items.length === 0) return;
+            
+            const total = items.reduce((sum, item) => sum + parseFloat(item.price.amount), 0);
+            alert(`Adding to KicksWorldwide cart:\n\n${items.map(i => `- ${i.title}: £${i.price.amount}`).join('\n')}\n\nTotal: £${total.toFixed(2)}`);
+        }
+
+        // Wishlist functions
+        function toggleWishlist() {
+            const sidebar = document.getElementById('wishlistSidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+            updateWishlistUI();
+        }
+
+        function updateWishlistUI() {
+            const count = document.getElementById('wishlistCount');
+            count.textContent = state.wishlist.length;
+            count.classList.toggle('hidden', state.wishlist.length === 0);
+            
+            const container = document.getElementById('wishlistItems');
+            
+            if (state.wishlist.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Your collection is empty</p>';
+            } else {
+                // Group by category
+                const grouped = {};
+                state.wishlist.forEach(item => {
+                    if (!grouped[item.category]) grouped[item.category] = [];
+                    grouped[item.category].push(item);
+                });
+                
+                container.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+                    <div>
+                        <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">${categoryNames[cat]}</h4>
+                        <div class="space-y-3">
+                            ${items.map(item => `
+                                <div class="flex gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
+                                    <img src="${item.image}" class="w-16 h-16 object-cover rounded bg-gray-800" onerror="this.src='https://via.placeholder.com/60'">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium text-white text-sm truncate">${item.title}</p>
+                                        <p class="text-red-400 font-bold">£${item.price.amount}</p>
+                                        <button onclick="addToOutfitFromWishlist('${item.id}')" class="text-xs text-green-400 hover:text-green-300 mt-1">Add to Outfit →</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            const total = state.wishlist.reduce((sum, item) => sum + parseFloat(item.price.amount), 0);
+            document.getElementById('wishlistTotal').textContent = `£${total.toFixed(2)}`;
+        }
+
+        function addToOutfitFromWishlist(itemId) {
+            const item = state.wishlist.find(w => w.id === itemId);
+            if (item) {
+                addToOutfit(item);
+                updateOutfitPreview();
+                
+                // If in fitting room, update there too
+                if (!document.getElementById('step3').classList.contains('hidden')) {
+                    updateFittingRoomUI();
+                    drawModel();
+                }
+            }
+        }
+
+        function clearWishlist() {
+            state.wishlist = [];
+            updateWishlistUI();
+        }
+
+        function addWishlistToCart() {
+            if (state.wishlist.length === 0) return;
+            const total = state.wishlist.reduce((sum, item) => sum + parseFloat(item.price.amount), 0);
+            alert(`Adding ${state.wishlist.length} items to cart. Total: £${total.toFixed(2)}`);
+        }
+
+        function refreshProducts() {
+            // Simulate refresh
+            document.querySelector('.loader')?.classList.remove('hidden');
+            setTimeout(() => {
+                document.querySelector('.loader')?.classList.add('hidden');
+                alert('Products refreshed!');
+            }, 1000);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('step2').classList.contains('hidden')) {
+                if (e.key === 'ArrowLeft') swipe('left');
+                if (e.key === 'ArrowRight') swipe('right');
+            }
+        });
+    </script>
+</body>
+</html>
